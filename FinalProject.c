@@ -30,7 +30,7 @@ void displayUsers(char **names, int *ages, char **emails, int count) {
 void searchUser(char **names, int *ages, char **emails, int count) {
     char searchName[100];
 
-    printf("Enter name to search: ");
+    printf("Enter name or email or age to search: ");
     scanf("%99s", searchName);
 
     int found = 0;
@@ -60,10 +60,6 @@ int main() {
     displayUsers(names, ages, emails, count);
     searchUser(names, ages, emails, count);
 
-    for (int i = 0; i < count; i++) {
-        free(names[i]);
-        free(emails[i]);
-    }
     free(names);
     free(emails);
     free(ages);
