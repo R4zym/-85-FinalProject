@@ -3,22 +3,42 @@
 #include <string.h>
 #include <time.h>
 
+void pressEnterToContinue() {
+    printf("\nกรุณากดปุ่ม Enter เพื่อไปต่อ...");
+    while (getchar() != '\n');
+}
+
 void openfile(){
     FILE *questiondata;
     questiondata = fopen("questiondata.csv","r");
 
-    if(questiondata == NULL){
-        printf("ไม่สามารถเปิดไฟล์ได้\n");
+    if (questiondata == NULL) {
+        fprintf(stderr, "[ERROR] ไม่สามารถเปิดไฟล์ 'questiondata.csv' ได้\n");
         return;
     }
     
-    printf("---------------ข้อมูล---------------\n");
+    printf("\n======================================================================\n");
+    printf("                       ข้อมูลจากไฟล์ (จัดคอลัมน์)\n");
+    printf("======================================================================\n");
+    printf("%-5s | %-40s | %-20s | %-20s\n", "รหัสคำถาม", "คำถาม", "ประเภทคำถาม", "วันที่เพิ่มคำถาม");
+    printf("----------------------------------------------------------------------\n");
 
     char line[256];
 
     while (fgets(line, sizeof(line), questiondata)) {
-        printf("%s", line);
+        line[strcspn(line, "\n\r")] = 0;
+
+        char *col1 = strtok(line, ",");
+        char *col2 = strtok(NULL, ",");
+        char *col3 = strtok(NULL, ",");
+        char *col4 = strtok(NULL, ",");
+        if (col1 != NULL && col2 != NULL && col3 != NULL && col4 != NULL) {
+            printf("%-5s | %-40s | %-20s | %-20s\n", col1, col2, col3, col4);
+        }
     }
+    printf("======================================================================\n\n");
+    
+    pressEnterToContinue();
 
     fclose(questiondata);
 }
@@ -158,7 +178,6 @@ void addquestion(){
             }
             if(questiontypechoice == 3){
                 printf("กำลังกลับเมนูหลัก\n");
-                exit(0);
             }
     } while (questiontypechoice != 1 || questiontypechoice != 2 || questiontypechoice != 3);
 
