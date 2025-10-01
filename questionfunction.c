@@ -3,6 +3,16 @@
 #include <string.h>
 #include <time.h>
 
+#define MAX_LINE 256
+#define MAX_Q 100
+
+typedef struct {
+    char question[200];
+    char type[30];
+} Question;   
+
+void updatequestion();
+
 void pressEnterToContinue() {
     printf("\nกรุณากดปุ่ม Enter เพื่อไปต่อ...");
     while (getchar() != '\n');
@@ -44,12 +54,13 @@ void openfile(){
 }
 
 void addquestion(){
-    int qid , numberquestion , questiontypechoice , day , month , year;
+    int qid , numberquestion , questiontypechoice , day , month , year , choice;
     char question[200], type[30], date[30], line[300] , id[10];
     size_t len , lenquestion , lentype , lendate;
     char *token;
     time_t t;
     struct tm *tm_info;
+    
 
     FILE *questiondata;
     questiondata = fopen("questiondata.csv","r");
@@ -75,8 +86,12 @@ void addquestion(){
             }
             if(questiontypechoice == 3){
                 printf("ออกจากเมนูเพิ่มคำถาม\n");
-                exit(0);
+                return;
             }
+            if (questiontypechoice != 1 && questiontypechoice != 2 && questiontypechoice != 3){
+                printf("กรุณาเลือก(1-3)\n");
+            }
+            
     } while (questiontypechoice != 1 && questiontypechoice != 2);
 
     fgets(line, sizeof(line), questiondata);
@@ -122,10 +137,13 @@ void addquestion(){
     fscanf(stdin, "%c");
     do
     {
+        printf("หากต้องการกลับเมนูหลัก(กด 0):");
+        scanf("%d",choice);
         printf("กรอกคำถาม: ");
         scanf("%s", question);
         printf("กรอกประเภทคำถาม: ");
         scanf("%s", type);
+        
         lenquestion = strlen(question);
         lentype = strlen(type);
         if(lenquestion == 0){
@@ -158,7 +176,9 @@ void addquestion(){
     
     fclose(questiondata);
 
-    do // เปลี่ยนเป็น switch case
+    pressEnterToContinue();
+
+    do
     {
         printf("------MENU------\n");
         printf("1. แก้ไขคำถาม\n");
@@ -166,28 +186,171 @@ void addquestion(){
         printf("3. กลับเมนูหลัก\n");
         printf("เลือกประเภทคำถาม: ");
         scanf("%d", &questiontypechoice);
-        // len = strlen(questiontypechoice);
-        //     if(len == 0){
-        //         printf("กรุณาเลือก 1-3\n");
-        //     }
-            // if(questiontypechoice == 1){
-            //     updatequestion();
-            // }
+
+            if(questiontypechoice == 1){
+                updatequestion();
+            }
             if(questiontypechoice == 2){
                 addquestion();
             }
             if(questiontypechoice == 3){
                 printf("กำลังกลับเมนูหลัก\n");
             }
+            else{
+                printf("กรุณาเลือก(1-3)\n");
+            }
     } while (questiontypechoice != 1 || questiontypechoice != 2 || questiontypechoice != 3);
 
 }
 
-void searchquestion(){
 
+void searchquestion(){
+    FILE *questiondata;
+    questiondata = fopen("questiondata.csv","r");
+    int questionchoice, found = 0 , totalQuestions = 0;
+    char type[30], question[200], line[300];
+    Question questionList[MAX_Q];
+
+    while (fgets(line, sizeof(line), questiondata)) {
+
+        line[strcspn(line, "\n")] = 0;
+
+        char *token = strtok(line, ",");
+        if (token != NULL) {
+            strcpy(questionList[totalQuestions].question, token);
+            token = strtok(NULL, ",");
+            if (token != NULL) {
+                strcpy(questionList[totalQuestions].type, token);
+            }
+            totalQuestions++;
+        }
+    }
+
+    do 
+    {
+        found = 0;
+        printf("-----------ค้นหา-----------\n");
+        printf("1. ค้นหาจากคำถาม\n");
+        printf("2. ค้นหาจากประเภทคำถาม\n");
+        printf("3. ออกจากเมนูค้นหาคำถาม\n");
+        printf("เลือก(1-3): ");
+        scanf("%d", &questionchoice);
+            if(questionchoice == 1){
+                printf("ค้นหาจากคำถาม\n");
+                printf("กรอกคำถามที่ต้องการค้นหา: ");
+                fgets(question, sizeof(question), stdin);
+                question[strcspn(question, "\n")] = 0;
+
+                for (int i = 0; i < totalQuestions; i++) {
+                    if (strcmp(questionList[i].question, question) == 0) {
+                    printf("เจอคำถาม: %s\n", questionList[i].question);
+                    found = 1;
+                    break;
+                    }
+                }
+
+                if (!found) {
+                    printf("ไม่พบคำถามที่คุณค้นหา\n");
+                }
+            }
+            if(questionchoice == 2){
+                printf("ค้นหาจากประเภทคำถาม\n");
+                printf("กรอกประเภทคำถามที่ต้องการค้นหา: ");
+                fgets(type, sizeof(type), stdin);
+                type[strcspn(type, "\n")] = 0;
+                
+                for (int i = 0; i < totalQuestions; i++) {
+                    if (strcmp(questionList[i].type, type) == 0) {
+                        printf("เจอคำถามประเภท %s: %s\n", type, questionList[i].question);
+                        found = 1;
+                    }
+                }
+
+                if (!found) {
+                    printf("ไม่พบคำถามในประเภทนี้\n");
+                }
+            }
+
+            if(questionchoice == 3){
+                printf("ออกจากเมนูค้นหาคำถาม\n");
+                break;
+            }
+
+    } while (questionchoice != 1 && questionchoice != 2);
+
+    printf("ค้นหาจาก %s\n", line);
+    
+    pressEnterToContinue();
+    
+    fclose(questiondata);
 }
 
 void updatequestion(){
+    FILE *questiondata;
+    questiondata = fopen("questiondata.csv","r");
+    int questiontypechoice , choice;
+    char type[30] , question[200], line[300];
+
+    if(questiondata == NULL){
+        printf("ไม่สามารถเปิดไฟล์ได้\n");
+        return;
+    }
+    do
+    {
+
+        printf("---------------แก้ไขข้อมูลคำถาม---------------\n");
+        printf("---------------ค้นหาข้อมูลที่จะแก้ไข---------------");
+        printf("1. ประเภทคำถาม\n");
+        printf("2. คำถาม\n");
+        printf("3. กลับเมนูหลัก\n");
+        scanf("%d", &choice);
+
+        switch (choice)
+        {
+        case 1:
+            do {
+                printf("-----------ประเภทคำถามที่จะเเก้ไข-----------\n");
+                printf("1. คำถามปลายเปิด\n");
+                printf("2. คำถามปลายปิด\n");
+                printf("3. ออกจากเมนูย่อยนี้\n");
+                printf("เลือกประเภทคำถาม: ");
+                scanf("%d", &questiontypechoice);
+
+                if (questiontypechoice == 1) {
+                    strcpy(type, "คำถามปลายเปิด");
+                }
+                else if (questiontypechoice == 2) {
+                    strcpy(type, "คำถามปลายปิด");
+                }
+                else if (questiontypechoice == 3) {
+                    printf("ออกจากเมนูย่อยแก้คำถาม\n");
+                    break; // ออกจาก do-while ที่สอง
+                }
+                else {
+                    printf("กรุณาเลือก 1-3\n");
+                }
+            } while (questiontypechoice != 3);
+            break;
+
+        case 2:
+            printf("keyword about question: ");
+            fgets(question, sizeof(question), stdin);
+            question[strcspn(question, "\n")] = 0;
+            break;
+
+        case 3:
+            printf("กำลังกลับเมนูหลัก\n");
+            break;
+
+        default:
+            printf("กรุณาเลือก 1-3\n");
+            break;
+        }
+    } while (choice != 1 && choice != 2);
+    
+    pressEnterToContinue();
+
+    fclose(questiondata);
 
 }
 
