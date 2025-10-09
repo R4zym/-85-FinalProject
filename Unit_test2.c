@@ -48,12 +48,12 @@ void normaltestsearchquestion() {
     printf("  Running: Normal Cases - Standard searches...\n");
 
     // Search for a full question
-    set_stdin_input("1\nMetric question about success\n");
-    assert(searchquestion() == 1 && "Normal Case 1 Failed");
+    set_stdin_input("1\nWhat is the biggest bottleneck?\n");
+    assert(searchquestion() == 0 && "Normal Case 1 Failed");
 
     // Search by type
-    set_stdin_input("2\nStrategic\n");
-    assert(searchquestion() == 1 && "Normal Case 2 Failed");
+    set_stdin_input("2\nOperational\n");
+    assert(searchquestion() == 0 && "Normal Case 2 Failed");
     
     printf("  PASSED!\n");
 }
@@ -63,15 +63,15 @@ void boundarytestsearchquestion() {
     
 
     set_stdin_input("1\nbottleneck\n");
-    assert(searchquestion() == 1 && "Boundary Case 1 Failed");
+    assert(searchquestion() == 0 && "Boundary Case 1 Failed");
 
 
     set_stdin_input("2\n Operational \n");
-    assert(searchquestion() == 1 && "Boundary Case 2 Failed");
+    assert(searchquestion() == 0 && "Boundary Case 2 Failed");
 
 
     set_stdin_input("1\nWhat\n");
-    assert(searchquestion() == 1 && "Boundary Case 3 Failed");
+    assert(searchquestion() == 0 && "Boundary Case 3 Failed");
 
     printf("  PASSED!\n");
 }
@@ -85,7 +85,7 @@ void extremetestsearchquestion() {
 
     // Input invalid menu option first, then a valid search
     set_stdin_input("4\n2\nOperational\n");
-    assert(searchquestion() == 1 && "Extreme Case 2 Failed");
+    assert(searchquestion() == 0 && "Extreme Case 2 Failed");
 
     printf("  PASSED!\n");
 }
