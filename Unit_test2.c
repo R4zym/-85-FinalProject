@@ -80,7 +80,7 @@ void extremetestsearchquestion() {
     printf("  Running: Extreme Cases - Invalid and non-existent searches...\n");
 
     // Search for a question that does not exist, then exit
-    set_stdin_input("1\nThis question does not exist\n3\n");
+    set_stdin_input("1\nThis question does not exist\n");
     assert(searchquestion() == 0 && "Extreme Case 1 Failed");
 
     // Input invalid menu option first, then a valid search

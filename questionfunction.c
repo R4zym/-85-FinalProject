@@ -295,7 +295,7 @@ int searchquestion() {
             printf("Invalid choice. Please select 1-3.\n");
         }
 
-    } while (questionchoice != 3);
+    } while (questionchoice != 3 && questionchoice != 1 && questionchoice != 2);
 
     return found;
 }
