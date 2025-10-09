@@ -3,8 +3,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#define FILE_NAME "questiondata.csv"
-#define MOCK_INPUT_FILE "mock_stdin.txt"
+
+#define DEFAULT_FILE_NAME "questiondata_en.csv"
+
+static const char* g_active_data_file = DEFAULT_FILE_NAME;
 
 #define MAX_LINE 256
 #define MAX_Q 500
@@ -15,9 +17,9 @@ typedef struct {
     char question[500];
     char type[200];
     char department[200];
-    char date[30];
+    char date[100];
     char activate[2];
-} Question;   
+} Question; 
 
 int is_test_mode = 0; // Global
 
@@ -25,29 +27,42 @@ void updatequestion();
 void addquestion();
 int searchquestion();
 void deletequestion();
-static int load_from_file(Question list[], int *count);
+int load_from_file(Question list[], int *count);
 
-static void save_to_file(Question list[], int count) {
-    if (is_test_mode) return;
-    FILE *file = fopen(FILE_NAME, "w");
-    if (!file) {
-        printf("Error: Could not open file for writing\n");
+
+
+void set_active_data_file(const char* filename) {
+    if (filename != NULL && strlen(filename) > 0) {
+        g_active_data_file = filename;
+    } else {
+        // ถ้าไม่มีชื่อไฟล์ส่งมา ให้กลับไปใช้ไฟล์ Default (ไฟล์จริง)
+        g_active_data_file = DEFAULT_FILE_NAME;
+    }
+}
+
+void save_to_file(Question list[], int count) {
+    // แก้ไข fopen ให้ใช้ตัวแปร g_active_data_file
+    FILE *fp = fopen(g_active_data_file, "w");
+    if (!fp) {
+        printf("Cannot open file for writing: %s\n", g_active_data_file);
         return;
     }
-    fprintf(file, "id,question,type,department,date,activate\n");
+
+    fprintf(fp, "id,question,type,department,date,activate\n");
     for (int i = 0; i < count; i++) {
-        fprintf(file, "%s,%s,%s,%s,%s,%s\n", list[i].id, list[i].question,
-                list[i].type, list[i].department, list[i].date, list[i].activate);
+        fprintf(fp, "%s,\"%s\",\"%s\",\"%s\",%s,%s\n",
+                list[i].id, list[i].question, list[i].type,
+                list[i].department, list[i].date, list[i].activate);
     }
-    fclose(file);
+    fclose(fp);
 }
 
 void openfile(){
     FILE *questiondata;
-    questiondata = fopen(FILE_NAME,"r");
+    questiondata = fopen(g_active_data_file,"r");
 
     if (questiondata == NULL) {
-        fprintf(stderr, "[ERROR] Could not open file 'questiondata.csv'\n");
+        fprintf(stderr, "[ERROR] Could not open file '%s'\n", g_active_data_file);
         return;
     }
     
@@ -120,7 +135,9 @@ void addquestion() {
         fgets(question_text, sizeof(question_text), stdin);
         question_text[strcspn(question_text, "\n")] = 0;
         if (strlen(question_text) > 0) break;
-        printf("Question cannot be empty\n");
+        if (strlen(question_text) == 0) {
+            printf("Question cannot be empty\n");
+        }
     } while (1);
 
     do {
@@ -131,9 +148,9 @@ void addquestion() {
         printf("Question type cannot be empty\n");
     } while (1);
 
-    FILE *questiondata = fopen(FILE_NAME, "r");
+    FILE *questiondata = fopen(g_active_data_file, "r");
     if (!questiondata) {
-        printf("Error: Could not open the question file\n");
+        printf("Error: Could not open the question file %s\n", g_active_data_file);
         return;
     }
     // Find the last id
@@ -187,50 +204,30 @@ int strcasecmp(const char *s1, const char *s2) {
     return *s1 - *s2;
 }
 
-static int load_from_file(Question list[], int *count) {
-    FILE *file = fopen(FILE_NAME, "r");
-    if (!file) {
-        *count = 0;
-        return 1;
+int load_from_file(Question list[], int *count) {
+    FILE *fp = fopen(g_active_data_file, "r");
+    if (!fp) {
+        // ไม่ต้องแสดง error ถ้าเป็นไฟล์ test ที่ยังไม่มี
+        if (strcmp(g_active_data_file, DEFAULT_FILE_NAME) == 0) {
+             printf("Cannot open file for reading: %s\\n", g_active_data_file);
+        }
+        return 0;
     }
 
-    char line[MAX_LINE];
+    char line[MAX_LINE * 2];
     *count = 0;
+    fgets(line, sizeof(line), fp);
 
-    // Skip header line
-    if (fgets(line, sizeof(line), file) == NULL) {
-        fclose(file);
-        return 1;
-    }
+    while (fgets(line, sizeof(line), fp) && *count < MAX_Q) {
+        line[strcspn(line, "\n")] = '\0';
+        if (strlen(line) == 0) continue;
 
-    // Read data line by line
-    while (*count < MAX_Q && fgets(line, sizeof(line), file)) {
-        line[strcspn(line, "\n\r")] = '\0';
-        if (strlen(line) < 5) continue;
-
-        char *token;
-        
-        token = strtok(line, ",");
-        if (token) strcpy(list[*count].id, token); else strcpy(list[*count].id, "");
-
-        token = strtok(NULL, ",");
-        if (token) strcpy(list[*count].question, token); else strcpy(list[*count].question, "");
-
-        token = strtok(NULL, ",");
-        if (token) strcpy(list[*count].type, token); else strcpy(list[*count].type, "");
-
-        token = strtok(NULL, ",");
-        if (token) strcpy(list[*count].department, token); else strcpy(list[*count].department, "");
-
-        token = strtok(NULL, ",");
-        if (token) strcpy(list[*count].date, token); else strcpy(list[*count].date, "");
-
-        token = strtok(NULL, "\n"); // Read until the end of the line for the last column
-        if (token) strcpy(list[*count].activate, token); else strcpy(list[*count].activate, "");
-        
+        sscanf(line, "%[^,],\"%[^\"]\",\"%[^\"]\",\"%[^\"]\",%[^,],%s",
+               list[*count].id, list[*count].question, list[*count].type,
+               list[*count].department, list[*count].date, list[*count].activate);
         (*count)++;
     }
-    fclose(file);
+    fclose(fp);
     return 1;
 }
 
@@ -309,9 +306,17 @@ void updatequestion() {
     if (!load_from_file(list, &count)) return;
 
     char id[16];
-    printf("Enter the ID of the question to edit: ");
-    fgets(id, sizeof(id), stdin);
-    id[strcspn(id, "\n")] = 0;
+    while (1) {
+        printf("Enter the ID of the question to edit: ");
+        if (fgets(id, sizeof(id), stdin) == NULL) {
+            return;
+        }
+        id[strcspn(id, "\n")] = 0; 
+
+        if (strlen(id) > 0) {
+            break; 
+        }
+    }
 
     int index = -1;
     for (int i = 0; i < count; i++) {
@@ -347,10 +352,18 @@ void deletequestion() {
     if (!load_from_file(list, &count)) return;
 
     char id[16];
-    printf("Enter the ID of the question to delete (set status to 'inactive'): ");
-    fgets(id, sizeof(id), stdin);
-    id[strcspn(id, "\n")] = 0;
 
+    while (1) {
+        printf("Enter the ID of the question to delete (set status to 'inactive'): ");
+        if (fgets(id, sizeof(id), stdin) == NULL) {
+            return;
+        }
+        id[strcspn(id, "\n")] = 0;
+
+        if (strlen(id) > 0) {
+            break;
+        }
+    }
     int found = 0;
     for (int i = 0; i < count; i++) {
         if (strcmp(list[i].id, id) == 0) {
@@ -370,7 +383,7 @@ void deletequestion() {
 
 void testaddquestion();
 void testsearchquestion();
-void EndToEndTestcase1QuestionFunction();
+void EndToEndTestQuestionWorkflow();
 
 
 void UnitTestQuestionFunction() {
@@ -384,6 +397,6 @@ void UnitTestQuestionFunction() {
 void EndToEndTestQuestionFunction() {
     is_test_mode = 0;
     printf("\n--- Running End-to-End Tests ---\n");
-    EndToEndTestcase1QuestionFunction();
+    EndToEndTestQuestionWorkflow();
     printf("\n--- End-to-End Tests Finished ---\n");
 }
