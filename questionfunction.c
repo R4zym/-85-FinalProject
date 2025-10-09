@@ -3,130 +3,141 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#define FILE_NAME "questiondata.csv"
+#define MOCK_INPUT_FILE "mock_stdin.txt"
 
 #define MAX_LINE 256
-#define MAX_Q 200
+#define MAX_Q 500
 #define LINE_SIZE 300
 
 typedef struct {
     char id[16];
-    char question[200];
-    char type[60];
-    char department[60];
+    char question[500];
+    char type[200];
+    char department[200];
     char date[30];
     char activate[2];
 } Question;   
 
-void updatequestion();
+int is_test_mode = 0; // Global
 
-void pressEnterToContinue() {
-    printf("\nกด Enter เพื่อดำเนินการต่อ...");
-    while (getchar() != '\n');
+void updatequestion();
+void addquestion();
+int searchquestion();
+void deletequestion();
+static int load_from_file(Question list[], int *count);
+
+static void save_to_file(Question list[], int count) {
+    if (is_test_mode) return;
+    FILE *file = fopen(FILE_NAME, "w");
+    if (!file) {
+        printf("Error: Could not open file for writing\n");
+        return;
+    }
+    fprintf(file, "id,question,type,department,date,activate\n");
+    for (int i = 0; i < count; i++) {
+        fprintf(file, "%s,%s,%s,%s,%s,%s\n", list[i].id, list[i].question,
+                list[i].type, list[i].department, list[i].date, list[i].activate);
+    }
+    fclose(file);
 }
 
 void openfile(){
     FILE *questiondata;
-    questiondata = fopen("questiondata.csv","r");
+    questiondata = fopen(FILE_NAME,"r");
 
     if (questiondata == NULL) {
-        fprintf(stderr, "[ERROR] ไม่สามารถเปิดไฟล์ 'questiondata.csv' ได้\n");
+        fprintf(stderr, "[ERROR] Could not open file 'questiondata.csv'\n");
         return;
     }
     
     printf("\n====================================================================================================================\n");
-    printf("                                                Question Data from File\n");
+    printf("                                          Question Data from File\n");
     printf("====================================================================================================================\n");
-
-    char line[LINE_SIZE];
-
     
+    char line[LINE_SIZE];
     int row = 0;
     while (fgets(line, sizeof(line), questiondata)) {
-        line[strcspn(line, "\n\r")] = 0;
+        line[strcspn(line, "\n\r")] = 0; // Remove trailing newline
+
+        char *col1 = strtok(line, ",");
+        char *col2 = strtok(NULL, ",");
+        char *col3 = strtok(NULL, ",");
+        char *col4 = strtok(NULL, ",");
+        char *col5 = strtok(NULL, ",");
+        char *col6 = strtok(NULL, ",");
 
         if (row == 0) {
-            char *col1 = strtok(line, ",");
-            char *col2 = strtok(NULL, ",");
-            char *col3 = strtok(NULL, ",");
-            char *col4 = strtok(NULL, ",");
-            char *col5 = strtok(NULL, ",");
-            char *col6 = strtok(NULL, ",");
-            printf("%-8s | %-50s | %-25s | %-20s | %-15s | %-8s\n", col1 ? col1 : "", col2 ? col2 : "", col3 ? col3 : "", col4 ? col4 : "", col5 ? col5 : "", col6 ? col6 : "");
+            printf("%-8s | %-50s | %-25s | %-20s | %-15s | %-8s\n", "ID", "Question", "Type", "Department", "Date", "Active");
             printf("--------------------------------------------------------------------------------------------------------------------\n");
         } else {
-            char *col1 = strtok(line, ",");
-            char *col2 = strtok(NULL, ",");
-            char *col3 = strtok(NULL, ",");
-            char *col4 = strtok(NULL, ",");
-            char *col5 = strtok(NULL, ",");
-            char *col6 = strtok(NULL, ",");
             printf("%-8s | %-50s | %-25s | %-20s | %-15s | %-8s\n", col1 ? col1 : "", col2 ? col2 : "", col3 ? col3 : "", col4 ? col4 : "", col5 ? col5 : "", col6 ? col6 : "");
         }
         row++;
     }
     
     printf("====================================================================================================================\n\n");
-    
-    pressEnterToContinue();
 
     fclose(questiondata);
 }
 
 void addquestion() {
-    int qid = 0, questiontypechoice, day, month, year , questionDepartmentChoice;
-    char question[200] = "", type[60] = "", department[60] = "", date[30] = "", line[300], activate[2] = "1";
-    time_t t;
-    struct tm *tm_info;
+    Question list[MAX_Q];
+    int count = 0;
+    load_from_file(list, &count);
 
-    FILE *questiondata = fopen("questiondata.csv", "r");
-    if (questiondata == NULL) {
-        printf("ไม่สามารถเปิดไฟล์ได้\n");
+    if (count >= MAX_Q) {
+        printf("Cannot add question because the list is full\n");
         return;
     }
 
-    
+    int questionDepartmentChoice;
+    char question_text[200] = "", type[60] = "", department[60] = "";
+
     do {
-        printf("-----------Department-----------\n");
-        printf("1. Management\n");
-        printf("2. Marketing\n");
-        printf("3. Sales\n");
-        printf("4. Human Resources\n");
-        printf("5. Finance & Accounting\n");
-        printf("6. Operations / Production\n");
-        printf("7. Customer Service\n");
-        printf("8. Other\n");
-        printf("9. กลับเมนูหลัก\n");
+        printf("-----------Select Department-----------\n");
+        printf("1. Management\n2. Marketing\n3. Sales\n4. Human Resources\n5. Finance & Accounting\n");
+        printf("6. Operations / Production\n7. Customer Service\n8. Other\n9. Back to Main Menu\n");
         printf("--------------------------------\n");
-        printf("เลือกประเภทคำถาม: ");
+        printf("Select department: ");
         scanf("%d", &questionDepartmentChoice);
         getchar();
-        if (questionDepartmentChoice == 1) {
-            strcpy(department, "Management");
-        } else if (questionDepartmentChoice == 2) {
-            strcpy(department, "Marketing");
-        } else if (questionDepartmentChoice == 3) {
-            strcpy(department, "Sales");
-        } else if (questionDepartmentChoice == 4) {
-            strcpy(department, "Human Resources");
-        } else if (questionDepartmentChoice == 5) {
-            strcpy(department, "Finance & Accounting");
-        } else if (questionDepartmentChoice == 6) {
-            strcpy(department, "Operations / Production");
-        } else if (questionDepartmentChoice == 7) {
-            strcpy(department, "Customer Service");
-        } else if (questionDepartmentChoice == 8) {
-            strcpy(department, "Other");
+
+        const char *departments[] = {"Management", "Marketing", "Sales", "Human Resources", "Finance & Accounting", "Operations / Production", "Customer Service", "Other"};
+        if (questionDepartmentChoice >= 1 && questionDepartmentChoice <= 8) {
+            strcpy(department, departments[questionDepartmentChoice - 1]);
         } else if (questionDepartmentChoice == 9) {
-            printf("กลับเมนูหลัก\n");
-            fclose(questiondata);
-            pressEnterToContinue();
+            printf("Returning to main menu...\n");
             return;
         } else {
-            printf("กรุณาเลือก 1-9\n");
+            printf("Invalid option. Please choose 1-9\n");
         }
-    } while (questionDepartmentChoice != 1 && questionDepartmentChoice != 2 && questionDepartmentChoice != 3 && questionDepartmentChoice != 4 && questionDepartmentChoice != 5 && questionDepartmentChoice != 6 && questionDepartmentChoice != 7 && questionDepartmentChoice != 8 && questionDepartmentChoice != 9);
+    } while (department[0] == '\0');
 
-    // หา id ล่าสุด
+    printf("---------------Add New Question---------------\n");
+    do {
+        printf("Enter the question: ");
+        fgets(question_text, sizeof(question_text), stdin);
+        question_text[strcspn(question_text, "\n")] = 0;
+        if (strlen(question_text) > 0) break;
+        printf("Question cannot be empty\n");
+    } while (1);
+
+    do {
+        printf("Enter the question type: ");
+        fgets(type, sizeof(type), stdin);
+        type[strcspn(type, "\n")] = 0;
+        if (strlen(type) > 0) break;
+        printf("Question type cannot be empty\n");
+    } while (1);
+
+    FILE *questiondata = fopen(FILE_NAME, "r");
+    if (!questiondata) {
+        printf("Error: Could not open the question file\n");
+        return;
+    }
+    // Find the last id
+    char line[MAX_LINE];
     int last_id = 0;
     while (fgets(line, sizeof(line), questiondata)) {
         char *token = strtok(line, ",");
@@ -136,48 +147,26 @@ void addquestion() {
         }
     }
     fclose(questiondata);
-
     
-    printf("---------------เพิ่มคำถามใหม่---------------\n");
-    printf("กรอกคำถาม: ");
-    fgets(question, sizeof(question), stdin);
-    question[strcspn(question, "\n")] = 0;
 
-    if (strlen(question) == 0) {
-        printf("กรุณากรอกคำถาม\n");
-        pressEnterToContinue();
-        return;
-    }
+    Question new_question;
+    sprintf(new_question.id, "%06d", last_id + 1);
+    strcpy(new_question.question, question_text);
+    strcpy(new_question.type, type);
+    strcpy(new_question.department, department);
+    strcpy(new_question.activate, "1");
 
-    
-    printf("กรอกประเภทคำถาม: ");
-    fgets(type, sizeof(type), stdin);
-    type[strcspn(type, "\n")] = 0;
-    if (strlen(type) == 0) {
-        printf("กรุณากรอกประเภทคำถาม\n");
-        pressEnterToContinue();
-        return;
-    }
-
-    
+    time_t t;
+    struct tm *tm_info;
     time(&t);
     tm_info = localtime(&t);
-    year = tm_info->tm_year + 1900;
-    month = tm_info->tm_mon + 1;
-    day = tm_info->tm_mday;
-    sprintf(date, "%02d/%02d/%04d", day, month, year);
+    sprintf(new_question.date, "%02d/%02d/%d", tm_info->tm_mday, tm_info->tm_mon + 1, tm_info->tm_year + 1900);
 
-    
-    questiondata = fopen("questiondata.csv", "a");
-    if (questiondata == NULL) {
-        printf("ไม่สามารถเปิดไฟล์ได้\n");
-        return;
-    }
-    fprintf(questiondata, "%06d,%s,%s,%s,%s,%s\n", last_id + 1, question, type, department, date, activate);
-    fclose(questiondata);
+    list[count] = new_question;
+    count++;
 
-    printf("เพิ่มคำถามใหม่เรียบร้อย\n");
-    pressEnterToContinue();
+    save_to_file(list, count);
+    printf("\n? New question added successfully\n");
 }
 
 void trim(char *str) {
@@ -198,223 +187,203 @@ int strcasecmp(const char *s1, const char *s2) {
     return *s1 - *s2;
 }
 
-int load_from_file(Question list[], int *count) {
-    FILE *questiondata = fopen("questiondata.csv", "r");
-    if (!questiondata) return 0;
+static int load_from_file(Question list[], int *count) {
+    FILE *file = fopen(FILE_NAME, "r");
+    if (!file) {
+        *count = 0;
+        return 1;
+    }
 
-    char line[LINE_SIZE];
+    char line[MAX_LINE];
     *count = 0;
 
-    // skip header
-    fgets(line, sizeof(line), questiondata);
+    // Skip header line
+    if (fgets(line, sizeof(line), file) == NULL) {
+        fclose(file);
+        return 1;
+    }
 
-    while (fgets(line, sizeof(line), questiondata)) {
-        line[strcspn(line, "\n")] = '\0';
-        if (strlen(line) == 0) continue;
+    // Read data line by line
+    while (*count < MAX_Q && fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\n\r")] = '\0';
+        if (strlen(line) < 5) continue;
 
-        sscanf(line, "%15[^,],%199[^,],%59[^,],%59[^,],%29[^,],%7[^,\n]", list[*count].id, list[*count].question, list[*count].type, list[*count].department, list[*count].date, list[*count].activate);
+        char *token;
+        
+        token = strtok(line, ",");
+        if (token) strcpy(list[*count].id, token); else strcpy(list[*count].id, "");
+
+        token = strtok(NULL, ",");
+        if (token) strcpy(list[*count].question, token); else strcpy(list[*count].question, "");
+
+        token = strtok(NULL, ",");
+        if (token) strcpy(list[*count].type, token); else strcpy(list[*count].type, "");
+
+        token = strtok(NULL, ",");
+        if (token) strcpy(list[*count].department, token); else strcpy(list[*count].department, "");
+
+        token = strtok(NULL, ",");
+        if (token) strcpy(list[*count].date, token); else strcpy(list[*count].date, "");
+
+        token = strtok(NULL, "\n"); // Read until the end of the line for the last column
+        if (token) strcpy(list[*count].activate, token); else strcpy(list[*count].activate, "");
+        
         (*count)++;
     }
-    fclose(questiondata);
+    fclose(file);
     return 1;
 }
 
-void searchquestion() {
+int searchquestion() {
     Question list[MAX_Q];
     int count = 0;
     if (!load_from_file(list, &count) || count == 0) {
-        printf("ไม่มีคำถามในระบบ\n");
-        pressEnterToContinue();
-        return;
+        printf("No questions found in the system.\n");
+        return 0;
     }
 
     int questionchoice, found = 0;
-    char type[60], question[200];
+    char type[200], question[500];
 
     do {
         found = 0;
-        printf("-----------ค้นหาคำถาม-----------\n");
-        printf("1. ค้นหาจากคำถาม\n");
-        printf("2. ค้นหาจากประเภทคำถาม\n");
-        printf("3. กลับเมนูหลัก\n");
-        printf("เลือก (1-3): ");
-        scanf("%d", &questionchoice);
-        getchar();
+        printf("-----------Search for Question-----------\n");
+        printf("1. Search by Question Text\n");
+        printf("2. Search by Question Type\n");
+        printf("3. Back to Main Menu\n");
+        printf("Select (1-3): ");
+        if (scanf("%d", &questionchoice) != 1) {
+             while(getchar() != '\n'); // Clear buffer on bad input
+             printf("Invalid input. Please enter a number.\n");
+             continue;
+        }
+        getchar(); // Consume newline
 
         if (questionchoice == 1) {
-            printf("ค้นหาจากคำถาม\n");
-            printf("กรอกคำถามที่ต้องการค้นหา: ");
+            printf("Enter text to search for: ");
             fgets(question, sizeof(question), stdin);
             question[strcspn(question, "\n")] = 0;
-            printf("---------------------------------------------------------------------------------\n");
-            printf("| %-10s | %-40s | %-25s | %-20s |\n", "รหัส", "คำถาม", "ประเภท", "วันที่เพิ่ม");
-            printf("---------------------------------------------------------------------------------\n");
+            printf("\n--- Search Results ---\n");
             for (int i = 0; i < count; i++) {
                 if(strstr(list[i].question, question) != NULL) {
-                    printf("| %-10s | %-40s | %-25s | %-20s |\n", list[i].id, list[i].question, list[i].type, list[i].date);
+                    printf("ID: %s | Type: %s | Question: %s\n", list[i].id, list[i].type, list[i].question);
                     found = 1;
                 }
             }
             if (!found) {
-                printf("ไม่พบคำถามที่ค้นหา\n");
+                printf("No matching questions found.\n");
             }
-        }
-
-        if (questionchoice == 2) {
-            printf("ค้นหาจากประเภทคำถาม\n");
-            printf("กรอกประเภทคำถามที่ต้องการค้นหา: ");
+            printf("----------------------\n");
+        } else if (questionchoice == 2) {
+            printf("Enter question type to search for: ");
             fgets(type, sizeof(type), stdin);
             type[strcspn(type, "\n")] = 0;
             trim(type);
-
-            found = 0;
+            printf("\n--- Search Results ---\n");
             for (int i = 0; i < count; i++) {
                 if (strcasecmp(list[i].type, type) == 0) {
-                    printf("เจอคำถามประเภท %s: %s\n", type, list[i].question);
+                    printf("ID: %s | Type: %s | Question: %s\n", list[i].id, list[i].type, list[i].question);
                     found = 1;
                 }
             }
 
             if (!found) {
-                printf("ไม่พบคำถามในประเภทนี้\n");
+                printf("No questions found for this type.\n");
             }
-        }
-
-        if (questionchoice == 3) {
-            printf("กลับเมนูหลัก\n");
+            printf("----------------------\n");
+        } else if (questionchoice == 3) {
+            printf("Returning to main menu...\n");
             break;
+        } else {
+            printf("Invalid choice. Please select 1-3.\n");
         }
 
     } while (questionchoice != 3);
 
-    pressEnterToContinue();
+    return found;
 }
 
-void updatequestion(){
+void updatequestion() {
     Question list[MAX_Q];
     int count = 0;
-    if (!load_from_file(list, &count) || count == 0) {
-        printf("ไม่มีคำถามในระบบ\n");
-        pressEnterToContinue();
-        return;
-    }
+    if (!load_from_file(list, &count)) return;
 
     char id[16];
-    printf("กรอก ID คำถามที่ต้องการแก้ไข: ");
-    scanf("%15s", id);
-    getchar();
+    printf("Enter the ID of the question to edit: ");
+    fgets(id, sizeof(id), stdin);
+    id[strcspn(id, "\n")] = 0;
 
-    int found = 0;
-    for(int i = 0; i < count; i++) {
-        if(strcmp(list[i].id, id) == 0) {
-            found = 1;
-            printf("พบคำถาม: %s\n", list[i].question);
-            printf("ประเภทคำถามเดิม: %s\n", list[i].type);
-
-            printf("กรอกคำถามใหม่ (หากไม่ต้องการเปลี่ยนแปลง กด Enter): \n");
-            char new_question[200];
-            fgets(new_question, sizeof(new_question), stdin);
-            new_question[strcspn(new_question, "\n")] = 0;
-            if (strlen(new_question) > 0) {
-                strcpy(list[i].question, new_question);
-            }
-
-            printf("กรอกประเภทคำถามใหม่ (หากไม่ต้องการเปลี่ยนแปลง กด Enter): \n");
-            char new_type[60];
-            fgets(new_type, sizeof(new_type), stdin);
-            new_type[strcspn(new_type, "\n")] = 0;
-            if (strlen(new_type) > 0) {
-                strcpy(list[i].type, new_type);
-            }
-
-            printf("สถานะเดิม: %s\n", list[i].activate);
-            printf("กรอกสถานะใหม่ (1=ใช้งาน, 0=ไม่ใช้งาน) (หากไม่ต้องการเปลี่ยนแปลง กด Enter): \n");
-            char new_activate[2];
-            fgets(new_activate, sizeof(new_activate), stdin);
-            new_activate[strcspn(new_activate, "\n")] = 0;
-            if (strlen(new_activate) > 0) {
-                strcpy(list[i].activate, new_activate);
-            }
-
-            time_t t;
-            struct tm *tm_info;
-            time(&t);
-            tm_info = localtime(&t);
-            int year = tm_info->tm_year + 1900;
-            int month = tm_info->tm_mon + 1;
-            int day = tm_info->tm_mday;
-            sprintf(list[i].date, "%02d/%02d/%04d", day, month, year);
-            strncpy(list[i].date, list[i].date, sizeof(list[i].date)-1);
+    int index = -1;
+    for (int i = 0; i < count; i++) {
+        if (strcmp(list[i].id, id) == 0) {
+            index = i;
             break;
         }
     }
 
-    if (!found) {
-        printf("ไม่พบคำถามที่มี ID นี้\n");
-        pressEnterToContinue();
+    if (index == -1) {
+        printf("Error: Question ID '%s' not found\n", id);
         return;
     }
 
-    FILE *questiondata = fopen("questiondata.csv", "w");
-    if(!questiondata) {
-        printf("ไม่สามารถเปิดไฟล์เพื่อเขียนได้\n");
-        pressEnterToContinue();
-        return;
+    printf("Current question: %s\n", list[index].question);
+    printf("Enter new question (press Enter to skip): ");
+    char buffer[200];
+    fgets(buffer, sizeof(buffer), stdin);
+    buffer[strcspn(buffer, "\n")] = 0;
+
+    if (strlen(buffer) > 0) {
+        strcpy(list[index].question, buffer);
+        save_to_file(list, count);
+        printf("\n? Question updated successfully\n");
+    } else {
+        printf("\nUpdate cancelled\n");
     }
-
-    fprintf(questiondata, "id,question,type,department,date,activate\n");
-
-    for(int i= 0; i < count; i++) {
-        fprintf(questiondata, "%s,%s,%s,%s,%s,%s\n", list[i].id, list[i].question, list[i].type, list[i].department, list[i].date, list[i].activate);
-    }
-    fclose(questiondata);
-
-    printf("แก้ไขคำถามเรียบร้อย\n");
-    pressEnterToContinue();
 }
 
-void deletequestion(){
+void deletequestion() {
     Question list[MAX_Q];
     int count = 0;
-    char id[16];
-    if (!load_from_file(list, &count) || count == 0) {
-        printf("ไม่มีคำถามในระบบ\n");
-        pressEnterToContinue();
-        return;
-    }
+    if (!load_from_file(list, &count)) return;
 
-    printf("กรุณากรอกรหัสคำถามที่ต้องการลบ : ");
-    scanf("%15s", id);
-    getchar();
+    char id[16];
+    printf("Enter the ID of the question to delete (set status to 'inactive'): ");
+    fgets(id, sizeof(id), stdin);
+    id[strcspn(id, "\n")] = 0;
 
     int found = 0;
-    for(int i = 0; i < count; i++) {
-        if(strcmp(list[i].id, id) == 0) {
+    for (int i = 0; i < count; i++) {
+        if (strcmp(list[i].id, id) == 0) {
             strcpy(list[i].activate, "0");
             found = 1;
             break;
         }
     }
 
-    if(!found) {
-        printf("ไม่พบรหัสคำถามนี้\n");
-        pressEnterToContinue();
-        return;
+    if (found) {
+        save_to_file(list, count);
+        printf("\n? Question ID %s has been set to 'inactive' successfully\n", id);
+    } else {
+        printf("Error: Question ID '%s' not found\n", id);
     }
+}
 
-    FILE *questiondata = fopen("questiondata.csv", "w");
-    if(!questiondata) {
-        printf("ไม่สามารถเปิดไฟล์เพื่อเขียนได้\n");
-        pressEnterToContinue();
-        return;
-    }
+void testaddquestion();
+void testsearchquestion();
+void EndToEndTestcase1QuestionFunction();
 
-    fprintf(questiondata, "id,question,type,department,date,activate\n");
-    for(int i = 0; i < count; i++) {
-        fprintf(questiondata, "%s,%s,%s,%s,%s,%s\n", list[i].id, list[i].question, list[i].type, list[i].department, list[i].date, list[i].activate);
-    }
-    fclose(questiondata);
 
-    printf("ลบคำถามเรียบร้อย\n");
-    pressEnterToContinue();
+void UnitTestQuestionFunction() {
+    is_test_mode = 0;
+    printf("\n--- Running Unit Tests ---\n");
+    testaddquestion();
+    testsearchquestion();
+    printf("\n--- Unit Tests Finished ---\n");
+}
+
+void EndToEndTestQuestionFunction() {
+    is_test_mode = 0;
+    printf("\n--- Running End-to-End Tests ---\n");
+    EndToEndTestcase1QuestionFunction();
+    printf("\n--- End-to-End Tests Finished ---\n");
 }
