@@ -1,2 +1,2 @@
-Compile command: gcc questionfunction.c Unit_test1.c Unit_test2.c e2e_test FinalProject.c -o questiondata
+Compile command: gcc questionfunction.c Unit_test1.c Unit_test2.c e2e_test.c FinalProject.c -o questiondata
 Run Program command : ./Questiondata
